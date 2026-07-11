@@ -1,6 +1,7 @@
 import './index.css'
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
+import {GLTFLoader, RGBELoader} from 'three/examples/jsm/Addons.js'
 
 const size = {
   width : window.innerWidth,
@@ -24,6 +25,41 @@ const texture = textureLoader.load('https://images.unsplash.com/photo-1782392455
 }
 );
 
+const envMap = new RGBELoader();
+envMap.load('/envMap.hdr',(envMap)=>{
+  envMap.mapping = THREE.EquirectangularReflectionMapping;
+  // scene.background = envMap;
+  scene.environment = envMap
+},()=>{},()=>{})
+
+
+//  3d model load extension -> .glb > .gltf
+let mixer;
+// const gltfLoader = new GLTFLoader();
+// gltfLoader.load('./robot.glb',(gltf)=>{
+//   const model = gltf.scene;
+//   // console.log(gltf.animations)
+//    mixer = new THREE.AnimationMixer(model);
+//   const action = mixer.clipAction(gltf.animations[12])
+//   action.play()
+//   model.position.y = -2
+//   // model.position.z = -3
+//   scene.add(model)
+// })
+
+// rayCaster line to find the object is in the scene or not means it send the light through camera and locate with mouse and find the object is in 3d because mouse can only work on 2d
+
+const rayCaster = new THREE.Raycaster();
+
+const mouse = new THREE.Vector2();
+
+window.addEventListener('mousemove',(e)=>{
+  mouse.x = (e.clientX/window.innerWidth)*2 -1;
+  mouse.y = -((e.clientY/window.innerHeight)*2 -1);
+
+  console.log(mouse.x,mouse.y)
+})
+
 // Camera
 const camera = new THREE.PerspectiveCamera(
   75,   // angle of eyesight fov
@@ -42,10 +78,10 @@ scene.add(ambientLight)
 
 const directionalLight = new THREE.DirectionalLight('white',3.2)
 directionalLight.position.set(1,1,1)
-scene.add(directionalLight)
+// scene.add(directionalLight)
 
 const directionalLightHelper = new THREE.DirectionalLightHelper(directionalLight);
-scene.add(directionalLightHelper)
+// scene.add(directionalLightHelper)
 
 //  Mesh -> Geometry
 const geometry = new THREE.BoxGeometry(1,1,1) // width,height,depth
@@ -55,7 +91,9 @@ const geometry = new THREE.BoxGeometry(1,1,1) // width,height,depth
 // })
 
 const material = new THREE.MeshStandardMaterial({
-  color:'red'
+  color:'red',
+  metalness: 0.9, // background reflection
+  roughness: 0.01 // roughness se reflection nhi hota hai 
 })
 
 const cube = new THREE.Mesh(geometry,material);
@@ -63,6 +101,15 @@ const cube = new THREE.Mesh(geometry,material);
 // adding actor in scene
 
 scene.add(cube);
+
+window.addEventListener('click',()=>{
+  rayCaster.setFromCamera(mouse,camera);
+  const intersect = rayCaster.intersectObject(cube);
+
+  if(intersect.length){
+    cube.material.color.set('green');
+  }
+})
 
 //  Canvas (parda)
 
@@ -98,11 +145,14 @@ controls.enableDamping = true
 function animate (){
   const delta = clock.getElapsedTime(); // time sbme same hota hai to sbme animation same time pr chle
   // console.log(delta)
-
-  cube.rotation.y = delta;
+  const newDelta = clock.getDelta();
+  // if(mixer){
+  //   mixer.update(delta * 0.001)
+  // }
+  // cube.rotation.y = delta;
 
   controls.update();
-  cube.rotation.x = delta*0.8
+  // cube.rotation.x = delta*0.8
   renderer.render(scene,camera);
   window.requestAnimationFrame(animate);
 }
